@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRYPTEX — Market Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #070709;
+      --surface: #0c0c0f;
+      --surface-hover: rgba(200, 165, 90, 0.025);
+      --gold: #c8a55a;
+      --gold-bright: #e8c47a;
+      --gold-dim: rgba(200, 165, 90, 0.18);
+      --gold-faint: rgba(200, 165, 90, 0.06);
+      --text: #e2dbd0;
+      --text-dim: #5e5a56;
+      --positive: #57b87a;
+      --positive-bg: rgba(87, 184, 122, 0.08);
+      --negative: #c95c5c;
+      --negative-bg: rgba(201, 92, 92, 0.08);
+      --border: rgba(200, 165, 90, 0.1);
+      --border-hover: rgba(200, 165, 90, 0.28);
+    }
+
+    html { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100%;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Subtle scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.06) 2px,
+        rgba(0, 0, 0, 0.06) 4px
+      );
+      pointer-events: none;
+      z-index: 900;
+    }
+
+    /* Radial vignette */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 40%, transparent 40%, rgba(0,0,0,0.65) 100%);
+      pointer-events: none;
+      z-index: 901;
+    }
+
+    /* Background glow */
+    .bg-glow {
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(200, 165, 90, 0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 64px 48px 96px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 56px;
+      opacity: 0;
+      transform: translateY(-12px);
+      animation: fadeDown 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+    }
+
+    .logo-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .logo-eyebrow {
+      font-size: 9px;
+      letter-spacing: 0.35em;
+      color: var(--gold);
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 58px;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      line-height: 0.9;
+    }
+
+    .logo em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .header-right {
+      text-align: right;
+      padding-bottom: 6px;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--positive);
+      box-shadow: 0 0 6px var(--positive);
+      animation: livePulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--positive); }
+      50% { opacity: 0.3; box-shadow: none; }
+    }
+
+    .timestamp {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 44px;
+      opacity: 0;
+      animation: fadeDown 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--border));
+    }
+
+    .divider-line.right {
+      background: linear-gradient(to left, transparent, var(--border));
+    }
+
+    .divider-diamond {
+      width: 5px;
+      height: 5px;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    .divider-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* ── COLUMN HEADERS ── */
+    .col-headers {
+      display: grid;
+      grid-template-columns: 52px 1fr 190px 130px 160px;
+      padding: 0 28px 14px;
+      opacity: 0;
+      animation: fadeDown 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.38s forwards;
+    }
+
+    .col-header {
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .col-header.right { text-align: right; }
+
+    /* ── COIN LIST ── */
+    .coin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .coin-row {
+      position: relative;
+      display: grid;
+      grid-template-columns: 52px 1fr 190px 130px 160px;
+      align-items: center;
+      padding: 22px 28px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+      cursor: default;
+      opacity: 0;
+      transform: translateX(-24px);
+      transition: border-color 0.35s ease, background 0.35s ease, transform 0.2s ease;
+    }
+
+    .coin-row:hover {
+      border-color: var(--border-hover);
+      background: var(--surface-hover);
+      transform: translateX(2px);
+    }
+
+    .coin-row:hover .ghost-rank {
+      opacity: 0.07;
+    }
+
+    .coin-row:nth-child(1) { animation: slideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.48s forwards; }
+    .coin-row:nth-child(2) { animation: slideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.58s forwards; }
+    .coin-row:nth-child(3) { animation: slideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.68s forwards; }
+    .coin-row:nth-child(4) { animation: slideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.78s forwards; }
+    .coin-row:nth-child(5) { animation: slideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.88s forwards; }
+
+    @keyframes slideIn {
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes fadeDown {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Accent left border on first row */
+    .coin-row:first-child::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      bottom: 20%;
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, var(--gold), transparent);
+    }
+
+    /* Ghost rank number */
+    .ghost-rank {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 108px;
+      font-weight: 700;
+      color: var(--gold);
+      opacity: 0.035;
+      line-height: 1;
+      user-select: none;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+      letter-spacing: -0.04em;
+    }
+
+    /* Rank */
+    .rank {
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    /* Coin info */
+    .coin-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .coin-icon-wrap {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--gold-faint);
+    }
+
+    .coin-icon {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+    }
+
+    .coin-icon-placeholder {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gold);
+    }
+
+    .coin-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 21px;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .coin-symbol {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Price */
+    .coin-price {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+      text-align: right;
+      letter-spacing: -0.02em;
+      transition: color 0.1s ease;
+    }
+
+    .coin-price.flash-up {
+      animation: priceFlashUp 0.8s ease forwards;
+    }
+    .coin-price.flash-down {
+      animation: priceFlashDown 0.8s ease forwards;
+    }
+
+    @keyframes priceFlashUp {
+      0%  { color: var(--positive); }
+      100% { color: var(--text); }
+    }
+    @keyframes priceFlashDown {
+      0%  { color: var(--negative); }
+      100% { color: var(--text); }
+    }
+
+    /* Change badge */
+    .coin-change {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .change-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+
+    .change-pill.positive {
+      color: var(--positive);
+      background: var(--positive-bg);
+    }
+
+    .change-pill.negative {
+      color: var(--negative);
+      background: var(--negative-bg);
+    }
+
+    .change-arrow { font-size: 9px; }
+
+    /* Market cap */
+    .coin-mcap {
+      text-align: right;
+    }
+
+    .mcap-label {
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      color: rgba(94, 90, 86, 0.55);
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .mcap-value {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-dim);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      text-align: center;
+      padding: 100px 0;
+      opacity: 0;
+      animation: fadeDown 0.6s ease 0.3s forwards;
+    }
+
+    .loading-text {
+      font-size: 10px;
+      letter-spacing: 0.35em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .loading-bar-track {
+      width: 180px;
+      height: 1px;
+      background: var(--border);
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .loading-bar-track::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+      animation: sweep 1.6s ease-in-out infinite;
+    }
+
+    @keyframes sweep {
+      to { left: 180%; }
+    }
+
+    /* ── ERROR ── */
+    .error-msg {
+      text-align: center;
+      padding: 80px 0;
+      opacity: 0;
+      animation: fadeDown 0.5s ease 0.1s forwards;
+    }
+
+    .error-code {
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--negative);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .error-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-style: italic;
+      color: var(--text-dim);
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      margin-top: 44px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      opacity: 0;
+      animation: fadeDown 0.9s ease 1.1s forwards;
+    }
+
+    .footer-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .footer-content {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 0 24px;
+    }
+
+    .footer-text {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .footer-dot {
+      width: 3px;
+      height: 3px;
+      background: var(--gold-dim);
+      border-radius: 50%;
+    }
+
+    /* ── REFRESH INDICATOR ── */
+    .refresh-ring {
+      position: fixed;
+      top: 28px;
+      right: 32px;
+      width: 28px;
+      height: 28px;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .refresh-ring.active {
+      opacity: 1;
+    }
+
+    .refresh-ring svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 720px) {
+      .wrapper { padding: 40px 20px 60px; }
+      .logo { font-size: 42px; }
+      .col-headers { display: none; }
+
+      .coin-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        gap: 16px 0;
+        padding: 20px;
+      }
+
+      .rank { display: none; }
+
+      .coin-info { grid-column: 1 / 3; }
+
+      .coin-price { text-align: left; font-size: 18px; }
+      .coin-change { justify-content: flex-end; align-self: center; }
+
+      .coin-mcap {
+        text-align: left;
+        grid-column: 1 / 3;
+      }
+
+      .ghost-rank { font-size: 72px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <div class="refresh-ring" id="refreshRing">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <circle cx="14" cy="14" r="11" stroke="rgba(200,165,90,0.15)" stroke-width="1.5"/>
+      <path d="M14 3 A11 11 0 0 1 25 14" stroke="#c8a55a" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <div class="wrapper">
+    <header class="header">
+      <div class="logo-wrap">
+        <div class="logo-eyebrow">Market Intelligence</div>
+        <div class="logo">CRYPT<em>EX</em></div>
+      </div>
+      <div class="header-right">
+        <div class="live-badge">
+          <div class="live-dot"></div>
+          Live Data
+        </div>
+        <div class="timestamp" id="timestamp">—</div>
+      </div>
+    </header>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-diamond"></div>
+      <div class="divider-text">Top Five by Market Capitalisation</div>
+      <div class="divider-diamond"></div>
+      <div class="divider-line right"></div>
+    </div>
+
+    <div class="col-headers" id="colHeaders" style="display:none">
+      <div class="col-header">#</div>
+      <div class="col-header">Asset</div>
+      <div class="col-header right">Price (USD)</div>
+      <div class="col-header right">24h Change</div>
+      <div class="col-header right">Market Cap</div>
+    </div>
+
+    <div id="app">
+      <div class="loading">
+        <div class="loading-text">Fetching market data</div>
+        <div class="loading-bar-track"></div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-line"></div>
+      <div class="footer-content">
+        <div class="footer-text">CoinGecko API</div>
+        <div class="footer-dot"></div>
+        <div class="footer-text" id="lastUpdated">—</div>
+        <div class="footer-dot"></div>
+        <div class="footer-text">Auto-refresh 60s</div>
+      </div>
+      <div class="footer-line"></div>
+    </footer>
+  </div>
+
+  <script>
+    const API_URL =
+      'https://api.coingecko.com/api/v3/coins/markets' +
+      '?vs_currency=usd&order=market_cap_desc&per_page=5&page=1' +
+      '&sparkline=false&price_change_percentage=24h';
+
+    let previousPrices = {};
+
+    function formatPrice(v) {
+      if (v >= 1) return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return '$' + v.toFixed(6);
+    }
+
+    function formatMcap(v) {
+      if (v >= 1e12) return '$' + (v / 1e12).toFixed(2) + 'T';
+      if (v >= 1e9)  return '$' + (v / 1e9).toFixed(1) + 'B';
+      if (v >= 1e6)  return '$' + (v / 1e6).toFixed(1) + 'M';
+      return '$' + v.toLocaleString();
+    }
+
+    function now12h() {
+      return new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+
+    function render(coins, isRefresh) {
+      document.getElementById('colHeaders').style.display = 'grid';
+      const list = coins.map((coin, i) => {
+        const change = coin.price_change_percentage_24h || 0;
+        const isPos  = change >= 0;
+        const prev   = previousPrices[coin.id];
+        let flashClass = '';
+        if (isRefresh && prev != null) {
+          if (coin.current_price > prev)      flashClass = 'flash-up';
+          else if (coin.current_price < prev) flashClass = 'flash-down';
+        }
+        return `
+          <div class="coin-row">
+            <div class="ghost-rank">${String(i + 1).padStart(2, '0')}</div>
+            <div class="rank">${String(i + 1).padStart(2, '0')}</div>
+
+            <div class="coin-info">
+              <div class="coin-icon-wrap">
+                <img class="coin-icon"
+                  src="${coin.image}" alt="${coin.name}"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                />
+                <div class="coin-icon-placeholder" style="display:none">${coin.symbol[0].toUpperCase()}</div>
+              </div>
+              <div>
+                <div class="coin-name">${coin.name}</div>
+                <div class="coin-symbol">${coin.symbol.toUpperCase()}</div>
+              </div>
+            </div>
+
+            <div class="coin-price ${flashClass}">${formatPrice(coin.current_price)}</div>
+
+            <div class="coin-change">
+              <span class="change-pill ${isPos ? 'positive' : 'negative'}">
+                <span class="change-arrow">${isPos ? '▲' : '▼'}</span>
+                ${isPos ? '+' : ''}${change.toFixed(2)}%
+              </span>
+            </div>
+
+            <div class="coin-mcap">
+              <div class="mcap-label">Mkt Cap</div>
+              <div class="mcap-value">${formatMcap(coin.market_cap)}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('app').innerHTML = `<div class="coin-list">${list}</div>`;
+
+      // Store prices for next diff
+      coins.forEach(c => { previousPrices[c.id] = c.current_price; });
+
+      const t = new Date();
+      document.getElementById('lastUpdated').textContent =
+        t.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + now12h();
+    }
+
+    async function fetchData(isRefresh = false) {
+      const ring = document.getElementById('refreshRing');
+      ring.classList.add('active');
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const coins = await res.json();
+        render(coins, isRefresh);
+      } catch (err) {
+        if (!isRefresh) {
+          document.getElementById('app').innerHTML = `
+            <div class="error-msg">
+              <div class="error-code">Connection Error</div>
+              <div class="error-text">Unable to reach market feed</div>
+            </div>`;
+        }
+      } finally {
+        ring.classList.remove('active');
+      }
+    }
+
+    // Clock
+    function tickClock() {
+      document.getElementById('timestamp').textContent = now12h();
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    // Data
+    fetchData(false);
+    setInterval(() => fetchData(true), 60_000);
+  </script>
+</body>
+</html>
